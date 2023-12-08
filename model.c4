@@ -1,46 +1,84 @@
 model {
 
-  customer = actor 'Cloud System Customer' {
-    description '
-      The regular customer of the system
-    '
+  visitor = actor 'Visitor' {
+    description: "Individual who engages with our platform but is not yet tracked in Salesforce"
   }
 
-  cloud = softwareSys 'Cloud System' {
-    description '
-      Our SaaS platfrom that allows
-      customers to interact with
-      the latest technologies
-    '
-
-    ui = container 'Frontends' {
-      description 'All the frontend applications of the cloud system'
-    }
-
-    legacy = container 'Cloud Legacy' {
-      description '
-        The legacy version of our SaaS
-        MVP as was presented to the first customers
-      '
-      link ./.github/workflows/update-diagrams.yml#L19-L25
-    }
-
-    next = container 'Cloud Next' {      
-      description 'Cloud Next is the next version of our cloud systems'
-    }
-
-    supportUser = actor 'Support Team' {
-      description '
-        A emploere from the support team
-        Has limited access to the system
-      '
-
-      -> customer 'helps with questions'
-    }
+  qualifiedLead = actor 'Qualified Lead' {
+    description: "Lead who has taken an actionable step by scheduling an introductory call"
   }
 
-  customer -> cloud 'uses and pays'
+  collective = company 'Collective' {
+    salesPerson = actor "Salesperson"
 
+    collectiveCom = softwareSystem 'Collective.com' {
+      collectiveBackend = container "Collective-Backend" {
+        technology: "Python (Django)"
+        component api "API" "Django"
+        component celery "Celery Workers" {
+          description "Consume jobs from queue asynchronously"
+          }
+        component webhookHandlers "Webhook Handlers" {
+          description "Handles webhooks with updates from external services"
+          technology "Django"  
+        }
+        database postgres "Primary DB" "Relational database" "Postgres"
+        database redis "Redis DB" "In-memory db used for storing jobs" "Redis"
+
+        api -> postgres "Fetches and writes data"
+        api -> funnel.conductor "Gets worflow state for user funnel" 
+        celery -> redis "Retrieves job information"
+        postgres -[Zapier]-> crm.salesforce "Sends Lead data (Eligibility/Qualification forms)  and PROMOCODE when new rows are added"
+        webhookHandlers -> postgres "Writ4es updated external data"
+      }
+      collectiveFrontend = container "Collective-Frontend" {
+        technology: "React.js"
+
+        collectiveFrontend -> calendly "Renders a Calendar iFrame and collects intro call data using"
+        collectiveFrontend -> ads.adPlatforms "Sends conversion data"
+      }
+      collectiveLanding = container "Collective-Landing" {
+        technology: "Next.js"
+        component webApp "Web App"
+        component healthCheck "Health Check Script Cron"
+
+        healthCheck -[REST]-> webApp "Monitors and restarts when unhealthy"
+      }
+
+      wordpress = container "CMS" {
+        technology: "PHP (Wordpress)"
+      }
+
+      collectiveBackend -> analytics.segment "Sends user events"
+      collectiveBackend -> referral.ambassador "Sends conversion data"
+      collectiveFrontend -[REST]-> collectiveBackend "Makes API calls to get workflow/pricing data"
+      collectiveFrontend -> payment.stripe "Redirects user to checkout"
+      collectiveLanding -> wordpress "Reverse-proxies requests"
+      collectiveLanding -> collectiveBackend "Makes API calls to get pricing data"
+      collectiveLanding -> collectiveFrontend "User clicks on 'Get Started' goes to a form on"
+      collectiveLanding -> logging.sentry  "Sends application error data"
+      wordpress -> collectiveFrontend "User clicks on 'Get Started' goes to a form on"
+    }
+
+    collectiveCom -> analytics "Sends analytics data to"
+    collectiveCom -> crm "Gets and writes prospect information"
+    collectiveCom -> funnel "Gets and writes user funnel state"
+    collectiveCom -> logging "Sends logs/APM data"
+  }
+
+  ads -> visitor "Attracts from a non-paid source"
+  cloudflare -> collectiveLanding "Caches pages and static assets on"
+  collective -> crm "Gets and writes prospect information"
+  organicTraffic -> visitor "Attracts from a non-paid source"
+  qualifiedLead -> collectiveCom "Signs up using Salesperson-provided link"
+  payment.stripe -[webhook]-> webhookHandlers  "Sends payment confirmation"
+  referral.ambassador -> visitor "Refers using a tracking link"
+  referral.ambassador -[webhook]-> webhookHandlers "Sends campaing updates" 
+  salesPerson -> qualifiedLead "Provides signup link to"
+  visitor -> collective "Visits"
+  visitor -> collectiveCom "Schedules intro call"
+  visitor -> qualifiedLead "Becomes after scheduling an intro call"  
+  
 }
 
 views {
@@ -48,27 +86,86 @@ views {
   view index {
     title "Landscape"
     include
-      customer, // include first
+      visitor, // include first
+      qualifiedLead,
+      *
+    exclude 
+      calendly, 
+      cloudflare, 
+      payment,
+      salesPerson -> qualifiedLead,
+      collectiveBackend -> referral.ambassador,
+      collectiveFrontend -> ads.adPlatforms,
+      referral.ambassador -> webhookHandlers,
+  }
+
+  view of collective {
+    title "Collective"
+    include 
+      visitor, // include first
+      qualifiedLead,
+      *
+    exclude
+      ads,
+      calendly,
+      cloudflare,
+      referral.ambassador -> webhookHandlers    
+  }
+
+  view of collectiveCom {
+    include
+      analytics.segment,
+      crm.salesforce,
+      funnel.conductor,
+      logging.sentry,
+      payment.stripe,
+      referral.ambassador,
+      *
+    exclude
+      ads,
+      calendly,
+      referral.ambassador -> webhookHandlers      
+  }
+
+  view of collectiveBackend {
+    include
+      crm.salesforce,
+      funnel.conductor,
+      referral.ambassador,
+      payment.stripe,
       *
   }
 
-  view customer of customer {
+  view of collectiveFrontend {
     include
-      *,
-      cloud,
-      cloud.ui,
-      customer -> cloud.ui.*,
-      supportUser,
-      
-    style * {
-      color secondary
-    }
-    style cloud, cloud.ui {
-      color muted
-    }
-    style customer {
-      color green
-    }      
-  }  
+      ads.adPlatforms,
+      payment.stripe,
+      *
+  }
+
+  view of collectiveLanding {
+    include
+      *
+  }
+
+  view of analytics {
+    include
+      *
+  }
+
+  view of logging {
+    include
+      *
+  }
+
+  view of funnel {
+    include
+      *
+  }
+
+  view of crm {
+    include
+      *
+  }
 
 }

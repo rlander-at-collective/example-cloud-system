@@ -1,12 +1,14 @@
 specification {
 
+  element company
+
   element actor {
     style {
       shape person
     }
   }
 
-  element softwareSys
+  element softwareSystem
 
   element externalSystem {
     style {
@@ -44,6 +46,10 @@ specification {
   element gqlMutation
   element gqlQuery
   element lambda
+
+  relationship REST
+  relationship webhook
+  relationship Zapier
 
   tag deprecated
   tag next
