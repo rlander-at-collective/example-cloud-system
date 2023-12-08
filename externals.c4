@@ -6,7 +6,7 @@ model {
     }
 
   analytics = externalSystem "Analytics" {
-    description: "Tracks user events" {
+    description: "Tracks user events" 
     bigquery = database "BigQuery" "Google BigQuery" "db"
     metabase = container "Metabase" "Business Intelligence/Analytics"
     segment = container "Segment" "Tracks user events and syncs with other services"    

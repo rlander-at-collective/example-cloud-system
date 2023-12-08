@@ -22,8 +22,20 @@ model {
           description "Handles webhooks with updates from external services"
           technology "Django"  
         }
-        database postgres "Primary DB" "Relational database" "Postgres"
-        database redis "Redis DB" "In-memory db used for storing jobs" "Redis"
+        database postgres "Primary DB" {
+          description "Relational database" 
+          technology "Postgres"
+          style {
+            icon https://icons.terrastruct.com/dev%2Fpostgresql.svg
+          }
+        }
+        database redis "Redis DB" {
+          description "In-memory db used for storing jobs" 
+          technology "Redis"
+          style {
+            icon https://icons.terrastruct.com/dev%2Fredis.svg
+          }
+        }
 
         api -> postgres "Fetches and writes data"
         api -> funnel.conductor "Gets worflow state for user funnel" 
@@ -33,12 +45,18 @@ model {
       }
       collectiveFrontend = container "Collective-Frontend" {
         technology: "React.js"
+        style {
+          shape browser
+        }
 
         collectiveFrontend -> calendly "Renders a Calendar iFrame and collects intro call data using"
         collectiveFrontend -> ads.adPlatforms "Sends conversion data"
       }
       collectiveLanding = container "Collective-Landing" {
         technology: "Next.js"
+        style {
+          shape browser
+        }
         component webApp "Web App"
         component healthCheck "Health Check Script Cron"
 
@@ -109,7 +127,7 @@ views {
       ads,
       calendly,
       cloudflare,
-      referral.ambassador -> webhookHandlers    
+      referral
   }
 
   view of collectiveCom {
