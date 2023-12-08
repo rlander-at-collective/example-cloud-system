@@ -106,15 +106,15 @@ views {
     include
       visitor, // include first
       qualifiedLead,
+      payment,
       *
     exclude 
       calendly, 
       cloudflare, 
-      payment,
       salesPerson -> qualifiedLead,
       collectiveBackend -> referral.ambassador,
       collectiveFrontend -> ads.adPlatforms,
-      referral.ambassador -> webhookHandlers,
+      -> webhookHandlers
   }
 
   view of collective {
@@ -122,12 +122,14 @@ views {
     include 
       visitor, // include first
       qualifiedLead,
+      payment,
       *
     exclude
       ads,
       calendly,
       cloudflare,
-      referral
+      referral,
+      -> webhookHandlers
   }
 
   view of collectiveCom {
